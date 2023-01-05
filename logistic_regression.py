@@ -2,9 +2,8 @@ import pandas as pd
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import confusion_matrix
+from sklearn.metrics import confusion_matrix,classification_report
 from sklearn.metrics import plot_confusion_matrix
-from sklearn.metrics import f1_score
 
 # Load imputed datasets
 df = pd.read_csv("Dataset/processed/breast-cancer-wisconsin-imputed.csv")
@@ -41,9 +40,8 @@ plot_confusion_matrix(model, X_test, y_test)
 accuracy = model.score(X_test, y_test)
 print("Accuracy:", accuracy)
 
-# Calculate the f1-score
-f1 = f1_score(y_test, y_pred, pos_label=2)
-print("F1_score:", f1)
+# Comprehensive Classification Report
+print(classification_report(y_test, y_pred))
 
 # Combine the true labels and predicted labels into a dataframe
 df2 = pd.DataFrame({'Actual': y_test, 'Predicted': y_pred})
