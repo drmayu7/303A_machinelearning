@@ -1,11 +1,12 @@
 import pandas as pd
-from sklearn.preprocessing import StandardScaler
-from sklearn.model_selection import train_test_split
+import numpy as np
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.model_selection import LeaveOneOut
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import confusion_matrix,classification_report
-from sklearn.metrics import plot_confusion_matrix
+from sklearn.metrics import confusion_matrix, classification_report,accuracy_score
+import seaborn as sns
 
-# Load imputed datasets
+# Read imputed datasets (MICE)
 df = pd.read_csv("Dataset/processed/breast-cancer-wisconsin-imputed.csv")
 
 # Remove the sample_id column
@@ -15,33 +16,43 @@ df = df.drop(columns=['sample_id'])
 X = df.drop(columns=['class'])
 y = df['class']
 
-# Scale the features - Standard scaling
-scaler = StandardScaler()
+# Scale the features - Min and Max scaling (sensitive to outliers)
+scaler = MinMaxScaler()
 X_scaled = scaler.fit_transform(X)
 
-# Split the data into training and testing sets using sklearn module
-X_train, X_test, y_train, y_test = train_test_split(X_scaled, y, test_size=0.2, random_state=42)
+# Cross-Validation for small datasets to prevent biased and overfitting of model
+loo = LeaveOneOut()
 
 # Run supervised learning - Logistic Regression algorithm
 model = LogisticRegression()
-model.fit(X_train, y_train)
 
-# Make predictions on the test dataset
-y_pred = model.predict(X_test)
+# LOO method use multiple observations of evaluation, hence need to initialize a list to store 'class' prediction from all observations
+predictions = []
 
-# Calculate the confusion matrix
-confusion_matrix = confusion_matrix(y_test, y_pred)
-print(confusion_matrix)
+# Loop through the cross-validation splits/observations
+for train_index, test_index in loo.split(X_scaled):
+    # While splitting data into training and test sets
+    X_train, X_test = X_scaled[train_index], X_scaled[test_index]
+    y_train, y_test = y[train_index], y[test_index]
 
-# Visualize the confusion matrix using a heatmap
-plot_confusion_matrix(model, X_test, y_test)
+    # Fit the model on the training data and predict the labels for the test set
+    model.fit(X_train,y_train)
+    predicted_y = model.predict(X_test)
 
-# Calculate the accuracy
-accuracy = model.score(X_test, y_test)
-print("Accuracy:", accuracy)
+    # Append each predicted label and accuracy score into list
+    predictions.append(predicted_y[0])
 
-# Comprehensive Classification Report
-print(classification_report(y_test, y_pred))
+# Convert the list to a Numpy Array
+predictions = np.array(predictions)
+
+# Calculate confusion matrix
+conf_mtx = confusion_matrix(y,predictions)
+
+# Plot confusion matrix using Seaborn Heatmap
+sns.heatmap(conf_mtx,annot=True,fmt='d',cmap='viridis')
+
+# Print the classification report
+print(classification_report(y, predictions))
 
 # Combine the true labels and predicted labels into a dataframe
-df2 = pd.DataFrame({'Actual': y_test, 'Predicted': y_pred})
+df2 = pd.DataFrame({'Actual': y, 'Predicted': predictions})
